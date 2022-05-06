@@ -61,6 +61,18 @@ class SimpleWaypointFollowingLocalPlanner(LocalPlanner):
         ):  # this actually clears the mission plan!!
             self.way_points_queue.append(self.mission_planner.mission_plan.popleft())
 
+        # set waypoint queue to current spawn location
+        # 1. find closest waypoint
+        # 2. remove all waypoints prior to closest waypoint
+        closest_waypoint = self.way_points_queue[0]
+        for waypoint in self.way_points_queue:
+            cur_dist = self.agent.vehicle.transform.location.distance(waypoint.location)
+            closest_dist = self.agent.vehicle.transform.location.distance(closest_waypoint.location)
+            if  cur_dist < closest_dist:
+                closest_waypoint = waypoint
+        while self.way_points_queue[0] != closest_waypoint:
+            self.way_points_queue.popleft()
+
     def is_done(self) -> bool:
         """
         If there are nothing in self.way_points_queue,
@@ -117,10 +129,15 @@ class SimpleWaypointFollowingLocalPlanner(LocalPlanner):
                 break
         current_speed = Vehicle.get_speed(self.agent.vehicle)
         target_waypoint = self.way_points_queue[0]
+
         if keyboard.is_pressed("space"):
-            print(target_waypoint.record())
-        close_waypoint = self.way_points_queue[120]
-        far_waypoint = self.way_points_queue[max(120, round(current_speed * 1.2))]
+            #print(target_waypoint.record())
+            print(self.agent.vehicle.transform.location)
+
+        waypoint_lookahead = round(pow(current_speed, 2)*0.002 + 0.7*current_speed)
+        far_waypoint = self.way_points_queue[waypoint_lookahead]
+        close_waypoint = self.way_points_queue[min(120, waypoint_lookahead)]
+        
         control: VehicleControl = self.controller.run_in_series(next_waypoint=target_waypoint, close_waypoint=close_waypoint, far_waypoint=far_waypoint)
         # self.logger.debug(f"\n"
         #                   f"Curr Transform: {self.agent.vehicle.transform}\n"

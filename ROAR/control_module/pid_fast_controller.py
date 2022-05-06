@@ -23,8 +23,7 @@ class PIDFastController(Controller):
         self.steering_boundary = steering_boundary
         self.config = json.load(Path(agent.agent_settings.pid_config_file_path).open(mode='r'))
         
-        self.counter = 0
-        self.braking = False
+        # useful variables
         self.old_pitch = 0
         self.delta_pitch = 0
 
@@ -36,58 +35,63 @@ class PIDFastController(Controller):
         self.logger = logging.getLogger(__name__)
 
     def run_in_series(self, next_waypoint: Transform, close_waypoint: Transform, far_waypoint: Transform, **kwargs) -> VehicleControl:
-        self.counter += 1
-        if self.counter > 1:
-            self.counter = 0
-        
-        steering, error, wide_error, sharp_error = self.lat_pid_controller.run_in_series(next_waypoint=next_waypoint, close_waypoint=close_waypoint, far_waypoint=far_waypoint)
-        current_speed = Vehicle.get_speed(self.agent.vehicle)
-        error = round(error, 3)
-        wide_error = round(wide_error, 3)
-        sharp_error = round(sharp_error, 3)
 
-        throttle = 1
-        brake = 0
-        wide_flag = ""
-        sharp_flag = ""
-        '''
-        if self.counter == 1:
-            pitch = float(next_waypoint.record().split(",")[4])
+        # run lat pid controller
+        steering, error, wide_error, sharp_error = self.lat_pid_controller.run_in_series(next_waypoint=next_waypoint, close_waypoint=close_waypoint, far_waypoint=far_waypoint)
+        
+        
+        current_speed = Vehicle.get_speed(self.agent.vehicle)
+        
+        # get errors from lat pid
+        error = abs(round(error, 3))
+        wide_error = abs(round(wide_error, 3))
+        sharp_error = abs(round(sharp_error, 3))
+        #print(error, wide_error, sharp_error)
+
+        # calculate change in pitch
+        pitch = float(next_waypoint.record().split(",")[4])
+        if pitch == 0.00000:
+            self.delta_pitch = -2.5
+        elif pitch == -1.11111:
+            self.delta_pitch = "jumpy whale mode"
+        else:
             self.delta_pitch = pitch - self.old_pitch
             self.old_pitch = pitch
-        '''
-        pitch = float(next_waypoint.record().split(",")[4])
-        self.delta_pitch = pitch - self.old_pitch
-        self.old_pitch = pitch
 
-        if current_speed > 200:
-            throttle = 0.8
-
-        if abs(steering) > 0.2:
-            throttle = 0.3
-
-        if abs(self.delta_pitch) > 0.5 and current_speed > 70:
-            #print(self.delta_pitch, "big change in slope!")
+        # throttle/brake control
+        if self.delta_pitch == "jumpy whale mode":
             throttle = 0
-            brake = 1
-        else:
-            #print(self.delta_pitch)
-            pass
-
-
-        if wide_error > 0.1 and current_speed > 100:
-            throttle = 0
-            wide_flag = "W-Brake"
-        if sharp_error > 0.6 and current_speed > 80:
+            brake = 0.1
+            #print("OU!")
+        elif self.delta_pitch < -2.3 and current_speed > 75: # big bump
             throttle = -1
             brake = 1
-            sharp_flag = "S-Brake"
-
-        #print(self.agent.vehicle.transform.rotation)
-        #if self.counter == 1:
-            #print(f"W-Error: {wide_error} \t S-Error: {sharp_error} {wide_flag} {sharp_flag}")
-            #print(next_waypoint.rotation, close_waypoint.rotation)
-            
+            #print("BIG slope")
+        elif sharp_error > 0.6 and current_speed > 85:
+            throttle = -1
+            brake = 1
+            #print("narrow turn")
+        elif self.delta_pitch < -0.35 and current_speed > 90: # small bump
+            throttle = 0
+            brake = 0
+            #print("slope:", round(self.delta_pitch, 2)) 
+        elif abs(steering) > 0.2:
+            throttle = 0.2
+            brake = 0
+            #print("hard steering")
+        elif wide_error > 0.05 and current_speed > 95:
+            throttle = max(0.2, 1 - 6.6*pow(wide_error + current_speed*0.0015, 3))
+            brake = 0
+        elif current_speed > self.max_speed:
+            throttle = 0.9
+            brake = 0
+        else:
+            throttle = 1
+            brake = 0
+        
+        # DEBUGGING
+        #print(round(self.delta_pitch, 2))
+        #print(round(wide_error, 2))
         
         return VehicleControl(throttle=throttle, steering=steering, brake=brake)
 
