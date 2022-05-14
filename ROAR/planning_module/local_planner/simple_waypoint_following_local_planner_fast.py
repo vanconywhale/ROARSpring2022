@@ -131,7 +131,7 @@ class SimpleWaypointFollowingLocalPlanner(LocalPlanner):
                 break
         current_speed = Vehicle.get_speed(self.agent.vehicle)
         target_waypoint = self.way_points_queue[0]
-
+        '''
         if keyboard.is_pressed("space"):
             print(target_waypoint.record())
             #print(self.agent.vehicle.transform.location)
@@ -139,7 +139,7 @@ class SimpleWaypointFollowingLocalPlanner(LocalPlanner):
             pass
         if keyboard.is_pressed("l"):
             print(vehicle_transform.location)
-
+        '''
         waypoint_lookahead = round(pow(current_speed, 2)*0.002 + 0.7*current_speed)
         far_waypoint = self.way_points_queue[waypoint_lookahead]
         close_waypoint = self.way_points_queue[min(120, waypoint_lookahead)]
