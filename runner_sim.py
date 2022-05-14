@@ -6,9 +6,12 @@ from ROAR.agent_module.pure_pursuit_agent import PurePursuitAgent
 from ROAR.configurations.configuration import Configuration as AgentConfig
 import argparse
 from misc.utils import str2bool
-from ROAR.agent_module.michael_pid_agent import PIDAgent
+from ROAR.agent_module.michael_pid_agent import PIDAgent as Michael
 from ROAR.agent_module.forward_only_agent import ForwardOnlyAgent
-
+# my agents
+from ROAR.agent_module.pid_agent import PIDAgent
+from ROAR.agent_module.special_agents.waypoint_generating_agent import WaypointGeneratigAgent
+from ROAR.agent_module.pid_fast_agent import PIDFastAgent
 
 def main(args):
     """Starts game loop"""
@@ -20,7 +23,7 @@ def main(args):
                                npc_agent_class=PurePursuitAgent)
     try:
         my_vehicle = carla_runner.set_carla_world()
-        agent = ForwardOnlyAgent(vehicle=my_vehicle,
+        agent = PIDFastAgent(vehicle=my_vehicle,
                          agent_settings=agent_config)
         carla_runner.start_game_loop(agent=agent,
                                      use_manual_control=not args.auto)
@@ -29,6 +32,9 @@ def main(args):
         logging.error(f"Something bad happened during initialization: {e}")
         carla_runner.on_finish()
         logging.error(f"{e}. Might be a good idea to restart Server")
+    
+    finally:
+        print("Time: " + str(carla_runner.end_simulation_time - carla_runner.start_simulation_time))
 
 
 if __name__ == "__main__":
@@ -41,7 +47,7 @@ if __name__ == "__main__":
 
     warnings.filterwarnings("ignore", module="carla")
     parser = argparse.ArgumentParser()
-    parser.add_argument("--auto", type=str2bool, default=False, help="True to use auto control")
+    parser.add_argument("--auto", type=str2bool, default=True, help="True to use auto control")
 
     warnings.filterwarnings("ignore", module="carla")
     args = parser.parse_args()

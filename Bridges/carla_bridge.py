@@ -166,11 +166,11 @@ class CarlaBridge(Bridge):
         return carla.VehicleControl(
             throttle=abs(control.throttle),
             steer=control.steering,
-            brake=0,
+            brake=control.brake,
             hand_brake=False,
             reverse=True if control.throttle < 0 else False,
             manual_gear_shift=False,
-            gear=1,
+            gear=1
         )
 
     def convert_vector3d_from_agent_to_source(
