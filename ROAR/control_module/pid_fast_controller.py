@@ -26,6 +26,8 @@ class PIDFastController(Controller):
         # useful variables
         self.old_pitch = 0
         self.delta_pitch = 0
+        self.pitch_bypass = False
+        self.force_brake = False
 
         self.lat_pid_controller = LatPIDController(
             agent=agent,
@@ -50,36 +52,44 @@ class PIDFastController(Controller):
 
         # calculate change in pitch
         pitch = float(next_waypoint.record().split(",")[4])
-        if pitch == 0.00000:
-            self.delta_pitch = -2.5
-        elif pitch == -1.11111:
-            self.delta_pitch = "jumpy whale mode"
+        #print(next_waypoint.record())
+        
+        if pitch == 1.234567890:
+            # bypass pitch
+            self.pitch_bypass = True
+        elif pitch == 0.987654321:
+            # force break
+            self.force_brake = True
         else:
+            self.pitch_bypass = False
+            self.force_brake = False
             self.delta_pitch = pitch - self.old_pitch
             self.old_pitch = pitch
 
         # throttle/brake control
-        if self.delta_pitch == "jumpy whale mode":
-            throttle = 0
-            brake = 0.1
-            #print("OU!")
-        elif self.delta_pitch < -2.3 and current_speed > 75: # big bump
+        if self.force_brake:
+            throttle = -1
+            brake = 1
+            #print("force break")
+        elif self.delta_pitch < -2.3 and current_speed > 75 and not self.pitch_bypass: # big bump
             throttle = -1
             brake = 1
             #print("BIG slope")
-        elif sharp_error > 0.6 and current_speed > 85:
+            #print(next_waypoint.record())
+        elif sharp_error > 0.6 and current_speed > 85: # narrow turn
             throttle = -1
             brake = 1
             #print("narrow turn")
-        elif self.delta_pitch < -0.35 and current_speed > 90: # small bump
+        elif self.delta_pitch < -0.35 and current_speed > 90 and not self.pitch_bypass: # small bump
             throttle = 0
             brake = 0
-            #print("slope:", round(self.delta_pitch, 2)) 
-        elif abs(steering) > 0.2:
-            throttle = 0.2
+            #print("slope:", round(self.delta_pitch, 3))
+            #print(next_waypoint.record())
+        elif abs(steering) > 0.3 and current_speed > 50: # steering control
+            throttle = 0.3
             brake = 0
             #print("hard steering")
-        elif wide_error > 0.05 and current_speed > 95:
+        elif wide_error > 0.05 and current_speed > 95: # wide turn
             throttle = max(0.2, 1 - 6.6*pow(wide_error + current_speed*0.0015, 3))
             brake = 0
         elif current_speed > self.max_speed:

@@ -93,7 +93,7 @@
     ]
   },
   "_comments": "// if you would like to use your own map, please put it under ROAR/configurations/YOUR_WAYPOINT.txt",
-  "waypoint_file_path": "./ROAR/configurations/major_center_waypoints_1LAPONLY_pitch_mod.txt",
+  "waypoint_file_path": "./ROAR/configurations/major_center_waypoints_1LAPONLY_righted_mod1.txt",
   "pid_config_file_path": "./ROAR/configurations/carla/carla_pid_fast_config.json",
   "simple_waypoint_local_planner_config_file_path": "./ROAR/configurations/carla/carla_pid_fast_waypoint_lookahead.json",
   "output_data_folder_path": "./data/output",
@@ -101,7 +101,7 @@
   "spawn_point_id": 12,
   "show_sensors_data": true,
   "save_sensor_data": false,
-  "max_speed": 250,
+  "max_speed": 300,
   "num_laps": 1
 }
 
